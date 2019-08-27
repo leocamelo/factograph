@@ -3,3 +3,4 @@ dist/*
 !dist/.gitkeep
 apps.json
 templates.json
+icons/
