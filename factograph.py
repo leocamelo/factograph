@@ -30,15 +30,15 @@ def mount_matches(templates_file):
     return matches
 
 
-def create_cell(app, color, w, h):
+def create_cell(app, color, width, height):
     if app in cells_cache:
         return cells_cache[app]
 
-    cell = Image.new('RGBA', (w, h), color)
+    cell = Image.new('RGBA', (width, height), color)
     icon = Image.open('icons/{}-icon.png'.format(app)).convert('RGBA')
 
-    icon_x = int(w / 2 - icon.width / 2)
-    icon_y = int(h / 2 - icon.height / 2)
+    icon_x = (width - icon.width) // 2
+    icon_y = (height - icon.height) // 2
 
     cell.paste(icon, (icon_x, icon_y), icon)
     cells_cache[app] = cell
