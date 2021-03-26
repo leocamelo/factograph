@@ -1,5 +1,7 @@
-import json
+import os
+import requests
 
+from requests.auth import HTTPBasicAuth
 from PIL import Image
 
 
@@ -9,25 +11,29 @@ image_h = 492
 cells_cache = {}
 
 
-def mount_colors(apps_file):
+def get_templates():
+    url = 'https://api.pluga.co/support/v1/task_templates'
+
+    username = os.getenv('PLG_SUPPORT_USERNAME')
+    password = os.getenv('PLG_SUPPORT_PASSWORD')
+
+    return requests.get(url, auth=HTTPBasicAuth(username, password)).json()
+
+
+def generate_data():
     colors = {}
-
-    with open(apps_file) as f:
-        for app in json.load(f):
-            colors[app['app_id']] = app['color']
-
-    return colors
-
-
-def mount_matches(templates_file):
     matches = set()
 
-    with open(templates_file) as f:
-        for template in json.load(f):
-            if 'coming_soon' not in template or not template['coming_soon']:
-                matches.add((template['tool_source'], template['tool_target']))
+    for template in get_templates():
+        app_source = template['app_source']
+        app_target = template['app_target']
 
-    return matches
+        colors[app_source['app_id']] = app_source['color']
+        colors[app_target['app_id']] = app_target['color']
+
+        matches.add((app_source['app_id'], app_target['app_id']))
+
+    return colors, matches
 
 
 def create_cell(app, color, width, height):
@@ -35,7 +41,7 @@ def create_cell(app, color, width, height):
         return cells_cache[app]
 
     cell = Image.new('RGBA', (width, height), color)
-    icon = Image.open('icons/{}-icon.png'.format(app)).convert('RGBA')
+    icon = Image.open('icons/{a}/{a}-icon.png'.format(a=app)).convert('RGBA')
 
     icon_x = (width - icon.width) // 2
     icon_y = (height - icon.height) // 2
@@ -47,8 +53,7 @@ def create_cell(app, color, width, height):
 
 
 def main():
-    colors = mount_colors('apps.json')
-    matches = mount_matches('templates.json')
+    colors, matches = generate_data()
 
     cell_w = image_w // 2
     cell_h = image_h
@@ -63,7 +68,9 @@ def main():
         image.paste(cell1)
         image.paste(cell2, (cell_w, 0))
 
-        image.save('dist/{}.png'.format(title), 'PNG')
+        image.save('dist/{}.png'.format(title), 'PNG', optimize=True)
+        image.save('dist/{}.png'.format(title), 'PNG', optimize=True)
+
         print(title)
 
 
