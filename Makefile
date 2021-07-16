@@ -4,5 +4,5 @@ default:
 	python3 -m awscli s3 sync dist s3://pluga.co/automatizations-pages-social --exclude .gitkeep
 
 install:
-	pip3 install --upgrade pip
-	pip3 install -r requirements.txt
+	pip3 install --user --upgrade pip
+	pip3 install --user -r requirements.txt
