@@ -5,10 +5,17 @@ from requests.auth import HTTPBasicAuth
 from PIL import Image
 
 
-image_w = 940
-image_h = 492
+email_img_w = 640
+email_img_h = 316
+email_icon_size = 200
 
-cells_cache = {}
+social_img_w = 940
+social_img_h = 492
+social_cell_w = social_img_w // 2
+social_cell_h = social_img_h
+
+img_cache = {}
+icon_cache = {}
 
 
 def get_templates():
@@ -36,42 +43,68 @@ def generate_data():
     return colors, matches
 
 
-def create_cell(app, color, width, height):
-    if app in cells_cache:
-        return cells_cache[app]
+def get_icon(app):
+    if app in icon_cache:
+        return icon_cache[app]
 
-    cell = Image.new('RGBA', (width, height), color)
     icon = Image.open('icons/{a}/{a}-icon.png'.format(a=app)).convert('RGBA')
+    icon_cache[app] = icon
+    return icon
+
+
+def create_img(app, color, width, height, icon_resize=None):
+    cache_key = '{}@{}x{}'.format(app, width, height)
+
+    if cache_key in img_cache:
+        return img_cache[cache_key]
+
+    img = Image.new('RGBA', (width, height), color)
+    icon = get_icon(app)
+
+    if icon_resize:
+        icon = icon.resize(icon_resize)
 
     icon_x = (width - icon.width) // 2
     icon_y = (height - icon.height) // 2
 
-    cell.paste(icon, (icon_x, icon_y), icon)
-    cells_cache[app] = cell
+    img.paste(icon, (icon_x, icon_y), icon)
+    img_cache[cache_key] = img
+    return img
 
-    return cell
+
+def save_img(img, scope, filename):
+    img.save('dist/{}/{}.png'.format(scope, filename), 'PNG', optimize=True)
+
+
+def generate_email_images(colors):
+    icon_resize = (email_icon_size, email_icon_size)
+
+    for app, color in colors.items():
+        img = create_img(app, color, email_img_w, email_img_h, icon_resize)
+        save_img(img, 'email', app)
+        print(app)
+
+
+def generate_social_images(colors, matches):
+    for app1, app2 in matches:
+        title = '{}-{}'.format(app1, app2)
+        img = Image.new('RGBA', (social_img_w, social_img_h))
+
+        cell1 = create_img(app1, colors[app1], social_cell_w, social_cell_h)
+        cell2 = create_img(app2, colors[app2], social_cell_w, social_cell_h)
+
+        img.paste(cell1)
+        img.paste(cell2, (social_cell_w, 0))
+
+        save_img(img, 'social', title)
+        print(title)
 
 
 def main():
     colors, matches = generate_data()
 
-    cell_w = image_w // 2
-    cell_h = image_h
-
-    for app1, app2 in matches:
-        title = '{}-{}'.format(app1, app2)
-        image = Image.new('RGBA', (image_w, image_h))
-
-        cell1 = create_cell(app1, colors[app1], cell_w, cell_h)
-        cell2 = create_cell(app2, colors[app2], cell_w, cell_h)
-
-        image.paste(cell1)
-        image.paste(cell2, (cell_w, 0))
-
-        image.save('dist/{}.png'.format(title), 'PNG', optimize=True)
-        image.save('dist/{}.png'.format(title), 'PNG', optimize=True)
-
-        print(title)
+    generate_email_images(colors)
+    generate_social_images(colors, matches)
 
 
 if __name__ == '__main__':

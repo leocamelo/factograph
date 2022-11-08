@@ -1,5 +1,7 @@
 venv/
-dist/*
-!dist/.gitkeep
+dist/social/*
+dist/email/*
+!dist/social/.gitkeep
+!dist/email/.gitkeep
 icons/*
 !icons/.gitkeep
